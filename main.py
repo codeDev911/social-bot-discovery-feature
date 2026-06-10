@@ -68,7 +68,7 @@ def run():
         logger.info(f"\n🔎 Searching [{profile_type}]: {keyword}")
 
         # Build search query - search for TikTok videos with keyword
-        search_query = f'"{keyword}" site:tiktok.com/video OR site:youtube.com/shorts OR site:instagram.com/reel OR site:instagram.com/video '
+        search_query = f'"{keyword}"  site:youtube.com/shorts OR site:tiktok.com/video OR site:instagram.com/reel OR site:instagram.com/video '
          
         raw_results = search_ddg(search_query, max_results=50)
         
