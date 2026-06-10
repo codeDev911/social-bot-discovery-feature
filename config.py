@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # API Integration
-API_ENDPOINT = os.getenv("API_ENDPOINT")
-USER_API_KEY = os.getenv("USER_API_KEY")  # User's API key from dashboard
+API_ENDPOINT = "https://social-bot-nine.vercel.app/dashboard/api/videos/ingest-discovered"
+USER_API_KEY = "s5ikqMfTlsuy10ehz2O8qG-4neFWKIeof37jfFKg0UA"  # User's API key from dashboard
 
 # Search Config
 PLATFORMS = [
