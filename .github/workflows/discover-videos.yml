@@ -2,7 +2,7 @@ name: Video Discovery Service
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # Daily at 12 PM UTC
+    - cron: "0 7 * * *"  # Daily at 7 PM UTC = 12:00 PM PKT.
   workflow_dispatch:     # Manual trigger
 
 jobs:
