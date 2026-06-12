@@ -24,7 +24,7 @@ HEADERS = {
 SEARCH_PROFILES = [
     # {"query": "travel pakistan", "type": "keyword"},
     # {"query": "#hunza valley", "type": "hashtag"},
-    {"query": "#fifa #football #fifa worldcup", "type": "hashtag"},
+    {"query": "#fifa #gta6 #gta6gameplay #fifa2026  #ishowspeed #mrbeast worldcup", "type": "hashtag"},
 ]
 
 # Filtering
