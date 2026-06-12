@@ -22,7 +22,7 @@ HEADERS = {
 
 # Search Topics (can be managed from dashboard later)
 SEARCH_PROFILES = [
-    # {"query": "travel pakistan", "type": "keyword"},
+    {"query": "fifa2026  gta6 fifaworldcup gta6gameplay", "type": "keyword"},
     # {"query": "#hunza valley", "type": "hashtag"},
     {"query": "#fifa #gta6 #gta6gameplay #fifa2026  #ishowspeed #mrbeast worldcup", "type": "hashtag"},
 ]
