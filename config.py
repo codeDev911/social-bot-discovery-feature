@@ -22,9 +22,9 @@ HEADERS = {
 
 # Search Topics (can be managed from dashboard later)
 SEARCH_PROFILES = [
-    # {"query": "travel pakistan", "type": "keyword"},
+    {"query": "football clips, fifa2026, today match highlight", "type": "keyword"},
     # {"query": "#hunza valley", "type": "hashtag"},
-    {"query": "#fifa #football #fifa worldcup", "type": "hashtag"},
+    {"query": "#fifa2026 #football #hilights #shortclips ", "type": "hashtag"},
 ]
 
 # Filtering
