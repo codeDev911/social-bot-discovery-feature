@@ -57,10 +57,10 @@ jobs:
               matrix = {'include': [{'user_key': k} for k in keys]}
               print(json.dumps(matrix))
               ")
-                            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-                      
-                            # Safely parse user count
-                            USER_COUNT=$(echo "$RESPONSE" | python3 -c "
+              echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+        
+              # Safely parse user count
+              USER_COUNT=$(echo "$RESPONSE" | python3 -c "
               import json, sys
               try:
                   print(len(json.load(sys.stdin).get('keys', [])))
