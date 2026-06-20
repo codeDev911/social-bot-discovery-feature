@@ -1,52 +1,44 @@
-# .github/workflows/discover-videos.yml
-#
-# Runs the video discovery bot for EACH user independently.
-
 name: Video Discovery Bot
- 
-on: 
+
+on:
   schedule:
-    - cron: "0 7 * * *"  
-  workflow_dispatch:          # manual trigger from GitHub UI
+    - cron: "0 7 * * *"
+  workflow_dispatch:
     inputs:
       user_api_key:
         description: "Run for a specific user key only (optional)"
         required: false
 
 jobs:
-  # ── Step 1: Fetch all active user keys ──────────────────────────────────────
   get-users:
     name: Fetch active users
     runs-on: ubuntu-latest
+
     outputs:
       matrix: ${{ steps.fetch.outputs.matrix }}
       has_users: ${{ steps.fetch.outputs.has_users }}
 
-    steps: # <-- Fixed: Aligned to 4 spaces
+    steps:
       - name: Fetch user list from API
         id: fetch
         env:
           MASTER_API_KEY: ${{ secrets.MASTER_API_KEY }}
-          MANUAL_KEY:     ${{ github.event.inputs.user_api_key }}
+          MANUAL_KEY: ${{ github.event.inputs.user_api_key }}
         run: |
           if [ -n "$MANUAL_KEY" ]; then
-            # Manual trigger with a specific key — run just that user
             echo "matrix={\"include\":[{\"user_key\":\"$MANUAL_KEY\"}]}" >> $GITHUB_OUTPUT
             echo "has_users=true" >> $GITHUB_OUTPUT
           else
-            # Fetch all active user keys from your dashboard API
             RESPONSE=$(curl -sf \
               -H "Authorization: Bearer $MASTER_API_KEY" \
               -H "Content-Type: application/json" \
               "https://social-bot-nine.vercel.app/dashboard/api/admin/due-users")
 
-            # Fallback defensively if API is down or empty
             if [ -z "$RESPONSE" ]; then
               echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
               echo "has_users=false" >> $GITHUB_OUTPUT
               echo "Found 0 users (API error or empty response)"
             else
-              # Build matrix
               MATRIX=$(echo "$RESPONSE" | python3 -c "
               import json, sys
               try:
@@ -57,9 +49,9 @@ jobs:
               matrix = {'include': [{'user_key': k} for k in keys]}
               print(json.dumps(matrix))
               ")
+
               echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-        
-              # Safely parse user count
+
               USER_COUNT=$(echo "$RESPONSE" | python3 -c "
               import json, sys
               try:
@@ -67,9 +59,9 @@ jobs:
               except Exception:
                   print(0)
               ")
+
               echo "Found $USER_COUNT users"
 
-              # Set true/false flag if we actually have elements to loop through
               if [ "$USER_COUNT" -gt 0 ]; then
                 echo "has_users=true" >> $GITHUB_OUTPUT
               else
@@ -78,18 +70,18 @@ jobs:
             fi
           fi
 
-  # ── Step 2: Run bot for each user in parallel ──────────────────────────────
   run-bot:
     name: "Run bot → ${{ matrix.user_key }}"
     needs: get-users
     if: needs.get-users.outputs.has_users == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJson(needs.get-users.outputs.matrix) }}
-      fail-fast: false      # one user failing doesn't cancel others
-      max-parallel: 5       # avoid rate limits
 
-    steps: # <-- Fixed: Aligned to 4 spaces
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix: ${{ fromJson(needs.get-users.outputs.matrix) }}
+
+    steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
