@@ -1,15 +1,3 @@
-"""
-config.py
-─────────
-Loads user config either from:
-  A) Your API (when USER_API_KEY is set)         ← GitHub Actions / production
-  B) Local .env overrides                        ← local dev / testing
-  C) Hardcoded defaults below                    ← fallback
-
-GitHub Actions passes USER_API_KEY as a secret/env var.
-The script fetches that user's search profiles, platform prefs,
-and filter settings from your dashboard API.
-"""
 
 import os
 import logging
@@ -101,12 +89,14 @@ def fetch_user_config(api_key: str) -> dict:
         logger.warning("⚠️  No USER_API_KEY — using default config")
         return DEFAULT_CONFIG
 
+    print("API_KEY_UDER",api_key.strip())
+    
     try:
         logger.info(f"📡 Fetching user config from API...")
         resp = requests.get(
             CONFIG_ENDPOINT,
             headers={
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {api_key.strip()}",
                 "Content-Type":  "application/json",
             },
             timeout=10,
