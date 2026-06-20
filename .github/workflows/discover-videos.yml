@@ -39,26 +39,11 @@ jobs:
               echo "has_users=false" >> $GITHUB_OUTPUT
               echo "Found 0 users (API error or empty response)"
             else
-              MATRIX=$(echo "$RESPONSE" | python3 -c "
-import json, sys
-try:
-    data = json.load(sys.stdin)
-    keys = data.get('keys', [])
-except Exception:
-    keys = []
-matrix = {'include': [{'user_key': k} for k in keys]}
-print(json.dumps(matrix))
-")
+              MATRIX=$(echo "$RESPONSE" | python3 -c "import json, sys; data = json.load(sys.stdin) if True else None; keys = data.get('keys', []) if data else []; print(json.dumps({'include': [{'user_key': k} for k in keys]}))")
 
               echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
-              USER_COUNT=$(echo "$RESPONSE" | python3 -c "
-import json, sys
-try:
-    print(len(json.load(sys.stdin).get('keys', [])))
-except Exception:
-    print(0)
-")
+              USER_COUNT=$(echo "$RESPONSE" | python3 -c "import json, sys; print(len(json.load(sys.stdin).get('keys', [])))")
 
               echo "Found $USER_COUNT users"
 
