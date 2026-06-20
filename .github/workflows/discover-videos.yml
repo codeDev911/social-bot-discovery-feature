@@ -57,7 +57,9 @@ jobs:
           print(json.dumps(matrix))
           ")
             echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-            echo "Found $(echo $RESPONSE | python3 -c \"import json,sys; print(len(json.load(sys.stdin).get('keys',[])))\"  ) users"
+    
+            USER_COUNT=$(echo $RESPONSE | python3 -c "import json, sys; print(len(json.load(sys.stdin).get('keys', [])))")            
+            echo "Found $USER_COUNT users"
           fi
 
   # ── Step 2: Run bot for each user in parallel ──────────────────────────────
