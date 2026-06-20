@@ -1,42 +1,98 @@
-name: Video Discovery Service
+# .github/workflows/discovery.yml
+#
+# Runs the video discovery bot for EACH user independently.
+#
+# How it works:
+#   1. A "dispatcher" job fetches all active user API keys from your dashboard
+#   2. It fans out to N parallel "runner" jobs — one per user
+#   3. Each runner passes that user's USER_API_KEY to main.py
+#   4. main.py fetches that user's config (profiles, platforms, filters) from your API
+#
+# Setup:
+#   Add ONE GitHub secret:  MASTER_API_KEY  (your admin key to fetch all user keys)
+
+name: Video Discovery Bot
 
 on:
   schedule:
-    - cron: "0 7 * * *"  # Daily at 7 PM UTC = 12:00 PM PKT.
-  workflow_dispatch:     # Manual trigger
+    - cron: "0 7 * * *"  
+  workflow_dispatch:          # manual trigger from GitHub UI
+    inputs:
+      user_api_key:
+        description: "Run for a specific user key only (optional)"
+        required: false
 
 jobs:
-  discover:
+  # ── Step 1: Fetch all active user keys ──────────────────────────────────────
+  get-users:
+    name: Fetch active users
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.fetch.outputs.matrix }}
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Fetch user list from API
+        id: fetch
+        env:
+          MASTER_API_KEY: ${{ secrets.MASTER_API_KEY }}
+          MANUAL_KEY:     ${{ github.event.inputs.user_api_key }}
+        run: |
+          if [ -n "$MANUAL_KEY" ]; then
+            # Manual trigger with a specific key — run just that user
+            echo "matrix={\"include\":[{\"user_key\":\"$MANUAL_KEY\"}]}" >> $GITHUB_OUTPUT
+          else
+            # Fetch all active user keys from your dashboard API
+            RESPONSE=$(curl -sf \
+              -H "Authorization: Bearer $MASTER_API_KEY" \
+              -H "Content-Type: application/json" \
+              "https://social-bot-nine.vercel.app/dashboard/api/admin/due-users")
+
+            # Expected response: {"keys": ["key1", "key2", ...]}
+            # Build matrix: {"include": [{"user_key": "key1"}, ...]}
+            MATRIX=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          keys = data.get('keys', [])
+          matrix = {'include': [{'user_key': k} for k in keys]}
+          print(json.dumps(matrix))
+          ")
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            echo "Found $(echo $RESPONSE | python3 -c \"import json,sys; print(len(json.load(sys.stdin).get('keys',[])))\"  ) users"
+          fi
+
+  # ── Step 2: Run bot for each user in parallel ──────────────────────────────
+  run-bot:
+    name: "Run bot → ${{ matrix.user_key }}"
+    needs: get-users
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.get-users.outputs.matrix) }}
+      fail-fast: false      # one user failing doesn't cancel others
+      max-parallel: 5       # avoid DDG rate limits — tune as needed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          cache: "pip"
 
       - name: Install dependencies
-        run: pip install -q -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Run discovery service
+      - name: Run discovery bot
         env:
-          API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
-          USER_API_KEY: ${{ secrets.USER_API_KEY }}
+          USER_API_KEY: ${{ matrix.user_key }}   # each user gets their own key
         run: python main.py
 
-      - name: Success notification
-        if: success()
-        run: echo "✅ Discovery service completed successfully"
-
-      - name: Failure notification
-        if: failure()
-        run: echo "❌ Discovery service failed - check logs above"
+      - name: Upload discovered videos log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "discovered-${{ matrix.user_key }}"
+          path: discovered_videos.txt
+          retention-days: 7
+          if-no-files-found: ignore
