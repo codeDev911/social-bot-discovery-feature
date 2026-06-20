@@ -34,16 +34,18 @@ jobs:
               -H "Content-Type: application/json" \
               "https://social-bot-nine.vercel.app/dashboard/api/admin/due-users")
 
+            echo "Raw API response: $RESPONSE"
+
             if [ -z "$RESPONSE" ]; then
               echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
               echo "has_users=false" >> $GITHUB_OUTPUT
               echo "Found 0 users (API error or empty response)"
             else
-              MATRIX=$(echo "$RESPONSE" | python3 -c "import json, sys; data = json.load(sys.stdin) if True else None; keys = data.get('keys', []) if data else []; print(json.dumps({'include': [{'user_key': k} for k in keys]}))")
+              MATRIX=$(echo "$RESPONSE" | python3 -c "import json, sys; data = json.load(sys.stdin); keys = data.get('keys', []); print(json.dumps({'include': [{'user_key': k} for k in keys]}))")
 
               echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
-              USER_COUNT=$(echo "$RESPONSE" | python3 -c "import json, sys; print(len(json.load(sys.stdin).get('keys', [])))")
+              USER_COUNT=$(echo "$RESPONSE" | python3 -c "import json, sys; data = json.load(sys.stdin); keys = data.get('keys', []); print(len(keys))")
 
               echo "Found $USER_COUNT users"
 
