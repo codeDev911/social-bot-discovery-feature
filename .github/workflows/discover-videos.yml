@@ -8,7 +8,7 @@ on:
       user_api_key:
         description: "Run for a specific user key only (optional)"
         required: false
- 
+
 jobs:
   get-users:
     name: Fetch active users
@@ -40,25 +40,25 @@ jobs:
               echo "Found 0 users (API error or empty response)"
             else
               MATRIX=$(echo "$RESPONSE" | python3 -c "
-              import json, sys
-              try:
-                  data = json.load(sys.stdin)
-                  keys = data.get('keys', [])
-              except Exception:
-                  keys = []
-              matrix = {'include': [{'user_key': k} for k in keys]}
-              print(json.dumps(matrix))
-              ")
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    keys = data.get('keys', [])
+except Exception:
+    keys = []
+matrix = {'include': [{'user_key': k} for k in keys]}
+print(json.dumps(matrix))
+")
 
               echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
 
               USER_COUNT=$(echo "$RESPONSE" | python3 -c "
-              import json, sys
-              try:
-                  print(len(json.load(sys.stdin).get('keys', [])))
-              except Exception:
-                  print(0)
-              ")
+import json, sys
+try:
+    print(len(json.load(sys.stdin).get('keys', [])))
+except Exception:
+    print(0)
+")
 
               echo "Found $USER_COUNT users"
 
