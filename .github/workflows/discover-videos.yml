@@ -1,19 +1,10 @@
-# .github/workflows/discovery.yml
+# .github/workflows/discover-videos.yml
 #
 # Runs the video discovery bot for EACH user independently.
-#
-# How it works:
-#   1. A "dispatcher" job fetches all active user API keys from your dashboard
-#   2. It fans out to N parallel "runner" jobs — one per user
-#   3. Each runner passes that user's USER_API_KEY to main.py
-#   4. main.py fetches that user's config (profiles, platforms, filters) from your API
-#
-# Setup:
-#   Add ONE GitHub secret:  MASTER_API_KEY  (your admin key to fetch all user keys)
 
 name: Video Discovery Bot
-
-on:
+ 
+on: 
   schedule:
     - cron: "0 7 * * *"  
   workflow_dispatch:          # manual trigger from GitHub UI
@@ -29,8 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.fetch.outputs.matrix }}
+      has_users: ${{ steps.fetch.outputs.has_users }}
 
-    steps:
+    steps: # <-- Fixed: Aligned to 4 spaces
       - name: Fetch user list from API
         id: fetch
         env:
@@ -40,6 +32,7 @@ jobs:
           if [ -n "$MANUAL_KEY" ]; then
             # Manual trigger with a specific key — run just that user
             echo "matrix={\"include\":[{\"user_key\":\"$MANUAL_KEY\"}]}" >> $GITHUB_OUTPUT
+            echo "has_users=true" >> $GITHUB_OUTPUT
           else
             # Fetch all active user keys from your dashboard API
             RESPONSE=$(curl -sf \
@@ -47,32 +40,56 @@ jobs:
               -H "Content-Type: application/json" \
               "https://social-bot-nine.vercel.app/dashboard/api/admin/due-users")
 
-            # Expected response: {"keys": ["key1", "key2", ...]}
-            # Build matrix: {"include": [{"user_key": "key1"}, ...]}
-            MATRIX=$(echo "$RESPONSE" | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          keys = data.get('keys', [])
-          matrix = {'include': [{'user_key': k} for k in keys]}
-          print(json.dumps(matrix))
-          ")
-            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
-    
-            USER_COUNT=$(echo $RESPONSE | python3 -c "import json, sys; print(len(json.load(sys.stdin).get('keys', [])))")            
-            echo "Found $USER_COUNT users"
+            # Fallback defensively if API is down or empty
+            if [ -z "$RESPONSE" ]; then
+              echo "matrix={\"include\":[]}" >> $GITHUB_OUTPUT
+              echo "has_users=false" >> $GITHUB_OUTPUT
+              echo "Found 0 users (API error or empty response)"
+            else
+              # Build matrix
+              MATRIX=$(echo "$RESPONSE" | python3 -c "
+              import json, sys
+              try:
+                  data = json.load(sys.stdin)
+                  keys = data.get('keys', [])
+              except Exception:
+                  keys = []
+              matrix = {'include': [{'user_key': k} for k in keys]}
+              print(json.dumps(matrix))
+              ")
+                            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+                      
+                            # Safely parse user count
+                            USER_COUNT=$(echo "$RESPONSE" | python3 -c "
+              import json, sys
+              try:
+                  print(len(json.load(sys.stdin).get('keys', [])))
+              except Exception:
+                  print(0)
+              ")
+              echo "Found $USER_COUNT users"
+
+              # Set true/false flag if we actually have elements to loop through
+              if [ "$USER_COUNT" -gt 0 ]; then
+                echo "has_users=true" >> $GITHUB_OUTPUT
+              else
+                echo "has_users=false" >> $GITHUB_OUTPUT
+              fi
+            fi
           fi
 
   # ── Step 2: Run bot for each user in parallel ──────────────────────────────
   run-bot:
     name: "Run bot → ${{ matrix.user_key }}"
     needs: get-users
+    if: needs.get-users.outputs.has_users == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.get-users.outputs.matrix) }}
       fail-fast: false      # one user failing doesn't cancel others
-      max-parallel: 5       # avoid DDG rate limits — tune as needed
+      max-parallel: 5       # avoid rate limits
 
-    steps:
+    steps: # <-- Fixed: Aligned to 4 spaces
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -87,7 +104,7 @@ jobs:
 
       - name: Run discovery bot
         env:
-          USER_API_KEY: ${{ matrix.user_key }}   # each user gets their own key
+          USER_API_KEY: ${{ matrix.user_key }}
         run: python main.py
 
       - name: Upload discovered videos log

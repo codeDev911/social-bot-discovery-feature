@@ -2,7 +2,7 @@ import re
 from difflib import SequenceMatcher
 from urllib.parse import urlparse, parse_qs
 
-BAD_KEYWORDS = [
+BAD_KEYWORDS = [ 
     "ad", "sponsored", "promo", "giveaway", "crypto",
     "earn money", "click here", "bitcoin", "work from home",
     "mlm", "dropship", "tag"
