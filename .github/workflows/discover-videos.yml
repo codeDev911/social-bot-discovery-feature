@@ -2,7 +2,7 @@ name: Video Discovery Bot
 
 on:
   schedule:
-    - cron: "0 14,22 * * *"
+    - cron: "0 14,18 * * *"
   workflow_dispatch:
     inputs:
       user_api_key:
